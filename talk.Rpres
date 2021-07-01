@@ -253,19 +253,41 @@ The **marginal likelihood** (denominator in Bayes Theorem) is the reason we can'
 
 To get around this, we instead employ sampling algorithms, such as [Markov chain Monte Carlo (MCMC)](https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo), to simulate a large number of times to approximate the posterior distribution instead.
 
+Benefits of a Bayesian approach to inference
+========================================================
+
+* Probabilistic estimates
+* Quantification of uncertainty
+* Ability to capture subject matter expertise
+* Intuitive conceptualisation of statistics
+* Simulation can help address limitations with small N
+* No *p*-values (don't get me started on Bayes factors...)
+
+Connection to Registered Report format
+========================================================
+
+![Centre for Open Science](registered_reports.width-800.png)
+
+A Bayesian framework (while not perfect) protects against a lot of traditional frequentist issues such as *p*-hacking. Bayesian formalism integrates easily into Registered Reports format as Bayesian inference is largely concerned with transparently *modelling the underlying statistical process that is likely to have generated your data*. This forces researchers to think deeper about study design and analysis methodology, consistent with the RR format.
+
+The overall workflow
+========================================================
+
+INSERT DIAGRAM HERE
+
 Tools for Bayesian inference
 ========================================================
 
+INSERT DIAGRAM HERE
 
-
-Putting it all together
+An applied example
 ========================================================
 
 Now that we have the basics, let's take a look at a basic Bayesian logistic regression in R using `Stan`.
 
 ## The premise
 
-**We are going to explore the relationship between the number of marks inside 50 and goals scored in the AFL for the 2020 season using data from prior seasons.**
+**We are going to explore whether time series features can classify .**
 
 Example: Data preparation
 ========================================================
@@ -476,6 +498,12 @@ season2020 %>%
   labs(title = "100 random posterior draws for 2020 data",x = "Marks Inside 50",
        y = "Goals")
 ```
+
+Common criticisms of Bayesian inference
+========================================================
+
+* Computation time
+* "Subjectivity" of priors
 
 Final remarks
 ========================================================
