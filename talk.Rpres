@@ -39,6 +39,7 @@ library(ggplot2)
 library(scales)
 library(tibble)
 library(foreign)
+library(janitor)
 library(Rcatch22)
 library(theft)
 library(rstan)
@@ -310,23 +311,36 @@ class: small-code
 
 I'm not really sure what to expect, but previous researchers have mentioned that a Student's t distribution is a safe first guess for logistic regression when we expect coefficients around 0 but with some chance of being large. Here is my vague prior for the coefficients (same for all 22 features).
 
-```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE, echo = FALSE}
-tmp <- data.frame(x = seq(-6, 6, length.out = 100)) %>%
-  mutate(normal = dnorm(x, mean = 0, sd = 1),
-         student_5 = dt(x, df = 5),
-         student_30 = dt(x, df = 30),
-         cauchy = dcauchy(x, location = 0, scale = 1)) %>%
-  gather(key = dist_type, value = y, 2:5) %>%
-  mutate(dist_type = case_when(
-    dist_type == "normal"     ~ "Normal",
-    dist_type == "student_5"  ~ "Student's t (df = 5)",
-    dist_type == "student_30" ~ "Student's t (df = 30)",
-    dist_type == "cauchy"     ~ "Cauchy")) %>%
-  ggplot(aes(x = x, y = y, colour = dist_type)) +
-  geom_line(size = 1.25, colour = "") +
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+data.frame(x = seq(from = -5, to = 5, by = 0.1)) %>%
+  mutate(y = LaplacesDemon::dst(x, mu = 0, sigma = 2.5, nu = 7),
+         category = "Prior") %>%
+  ggplot(aes(x = x, y = y, colour = category)) +
+  geom_line(size = 1.25) +
   labs(title = "Our vague coefficient prior",
        x = "x",
-       y = "Probability Density")
+       y = "Probability Density") +
+  scale_colour_manual(values = palette) +
+  theme(legend.position = "none")
+```
+
+Example: Basic visualisation of our prior
+========================================================
+class: small-code
+
+Our intercept is also pretty wide and vague, using a mean of 0 and SD of 3 $\mathcal{N}(0,3)$.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+data.frame(x = seq(from = -5, to = 5, by = 0.1)) %>%
+  mutate(y = dnorm(x, mean = 0, sd = 1),
+         category = "Prior") %>%
+  ggplot(aes(x = x, y = y, colour = category)) +
+  geom_line(size = 1.25) +
+  labs(title = "Our vague intercept prior",
+       x = "x",
+       y = "Probability Density") +
+  scale_colour_manual(values = palette) +
+  theme(legend.position = "none")
 ```
 
 Example: Initial Bayesian model fit
