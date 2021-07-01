@@ -26,7 +26,7 @@ library(theft)
 
 # Named palette of colours to ensure they get consistent colours in all plots
 
-palette <- c("#E494D3", "#87DCC0", "#88BBE4", "#998AD3", "#CDF1AF")
+palette <- c("#E494D3", "#87DCC0", "#88BBE4", "#998AD3", "#D4BBDD")
 
 names(palette) <- c("Prior", 
                     "Likelihood of seeing 5/10 students in Go8",
@@ -144,6 +144,7 @@ do_bayes <- function(n = 100){
     geom_line(data = lh, size = 1.25, aes(colour = category)) +
     geom_line(data = st_post, size = 1.25, aes(colour = category)) +
     labs(title = "Our prior, random sample, and posterior update",
+         subtitle = paste0("N = ", n),
          x = the_xlab,
          y = "Probability Density",
          colour = NULL) +
@@ -154,10 +155,10 @@ do_bayes <- function(n = 100){
   return(p)
 }
 
-p_5 <- do_bayes(n = 5) + labs(subtitle = "Sample = 5")
-p_10 <- do_bayes(n = 10) + labs(subtitle = "Sample = 10")
-p_100 <- do_bayes(n = 100) + labs(subtitle = "Sample = 100")
-p_1000 <- do_bayes(n = 1000) + labs(subtitle = "Sample = 1000")
+p_5 <- do_bayes(n = 5)
+p_10 <- do_bayes(n = 10)
+p_100 <- do_bayes(n = 100)
+p_1000 <- do_bayes(n = 1000)
 
 print(p_100)
 print(p_1000)
