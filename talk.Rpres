@@ -1,0 +1,397 @@
+<style>
+.small-code pre code {
+  font-size: 1em;
+}
+</style>
+
+Basic principles of a Bayesian workflow
+========================================================
+author: Trent Henderson
+date: 16 July 2021
+autosize: true
+css: corp-styles.css
+transition: linear
+
+
+Goals of the presentation
+========================================================
+class: small-code
+
+This interactive talk aims to help you achieve three things:
+
+- Develop an initial understanding of Bayes rule and how to apply it
+- Understand how the Bayesian approach fits within the open science framework
+- Understand the tools to carry out Bayesian analysis (with an example)
+
+All the code for today is in a [GitHub repository](https://github.com/hendersontrent/bayes-workflow-pres).
+
+```{r setup, include = FALSE}
+library(knitr)
+opts_chunk$set(fig.width = 8, fig.height = 4.2, dpi = 600, out.width = "850px", out.height = "450px")
+```
+
+```{r, message = FALSE, echo = FALSE}
+library(data.table)
+library(dplyr)
+library(magrittr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(tibble)
+library(foreign)
+library(janitor)
+library(Rcatch22)
+library(theft)
+library(rstan)
+library(bayesplot)
+library(janitor)
+library(tidybayes)
+
+# Named palette of colours to ensure they get consistent colours in all plots
+
+palette <- c("#E494D3", "#87DCC0", "#88BBE4", "#998AD3", "#D4BBDD")
+
+names(palette) <- c("Prior", 
+                    "Likelihood of seeing 5/10 students in Go8",
+                    "Unstandardised Posterior",
+                    "Standardised Posterior",
+                    "Random Sample of Students")
+```
+
+Activity: Our prior beliefs
+========================================================
+
+## Consider the following question:
+
+**What proportion of all university students in Australia are studying at a Group of Eight university?**
+
+* 0.2
+* 0.3
+* 0.4
+
+Pop your answers in the Zoom chat!
+
+Activity: Our prior belief
+========================================================
+class: small-code
+
+Since we have a few values that are close together, we believe that the **true** proportion could be most likely somewhere around 0.3 but with some variability. We can model this uncertainty using a distribution. `Beta` distributions are ideal for proportion outcomes.
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
+x <- seq(0, 1, length.out = 11)
+the_xlab <- "Possible values of actual proportion"
+
+pr <- data.frame(x = x,
+                 y = dbeta(x, shape1 = 3.5, shape2 = 6.5),
+                 category = "Prior") %>%
+  mutate(y = y / sum(y))
+
+pr %>%
+  ggplot(aes(x = x, y = y, colour = category)) +
+  geom_line(size = 1.25) +
+  labs(title = "Our prior",
+       x = the_xlab,
+       y = "Probability Density") +
+  theme(legend.position = "none")
+```
+
+Activity: A sample of data
+========================================================
+class: small-code
+
+Now let's say we sampled 10 university students and observed whether they were attending a Go8 or not and 5 said they were.
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
+lh <- data.frame(x = 0:10) %>%
+  mutate(y = dbinom(x = x, prob = 0.5, size = 10),
+         category = names(palette)[2]) %>%
+  mutate(x = x / max(x))
+
+pr %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line(aes(colour = category), size = 1.25) +
+  geom_line(data = lh, size = 1.25, aes(colour = category)) +
+  labs(title = "Our prior and a random sample of students",
+       x = the_xlab,
+       y = "Probability Density",
+       colour = NULL) +
+  scale_colour_manual(values = palette) +
+  theme(legend.position = "bottom",
+        legend.key = element_blank())
+```
+
+Activity: Combining our belief and the observed data
+========================================================
+class: small-code
+
+We can multiply our `prior` by the observed data (`likelihood`) to get the `posterior`.
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
+posterior <- data.frame(x = x,
+                        y = pr$y*lh$y,
+                        category = "Unstandardised Posterior")
+
+pr %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line(aes(colour = category), size = 1.25) +
+  geom_line(data = lh, size = 1.25, aes(colour = category)) +
+  geom_line(data = posterior, size = 1.25, aes(colour = category)) +
+  labs(title = "Our prior, random sample, and posterior update",
+       x = the_xlab,
+       y = "Probability Density",
+       colour = NULL) +
+  scale_colour_manual(values = palette) +
+  theme(legend.position = "bottom",
+        legend.key = element_blank())
+```
+
+Activity: Updating our beliefs
+========================================================
+class: small-code
+
+To properly update our beliefs, we need to standardise our posterior so that the total probability equals one.
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
+st_post <- posterior %>%
+  mutate(y = y / sum(y),
+         category = "Standardised Posterior")
+
+pr %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line(aes(colour = category), size = 1.25) +
+  geom_line(data = lh, size = 1.25, aes(colour = category)) +
+  geom_line(data = posterior, size = 1.25, aes(colour = category)) +
+  geom_line(data = st_post, size = 1.25, aes(colour = category)) +
+  labs(title = "Our prior, random sample, and standardised posterior update",
+       x = the_xlab,
+       y = "Probability Density",
+       colour = NULL) +
+  scale_colour_manual(values = palette) +
+  theme(legend.position = "bottom",
+        legend.key = element_blank())
+```
+
+Activity: The impact of sample size
+========================================================
+class: small-code
+
+So far we have used a random sample of 10 students. But what happens if we sample 100 and 50% still said they were at a Go8?
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
+do_bayes <- function(n = 100){
+  
+  # Prior
+  
+  x <- seq(0, 1, length.out = n+1)
+  
+  pr <- data.frame(x = x,
+                   y = dbeta(x, shape1 = 3.5, shape2 = 6.5),
+                   category = "Prior") %>%
+    mutate(y = y / sum(y))
+  
+  # Likelihood
+  
+  lh <- data.frame(x = 0:n) %>%
+    mutate(y = dbinom(x = x, prob = 0.5, size = n),
+           category = "Random Sample of Students",
+           x = x / n)
+  
+  # Posterior
+  
+  posterior <- data.frame(x = x,
+                          y = pr$y*lh$y,
+                          category = "Unstandardised Posterior")
+  
+  st_post <- posterior %>%
+    mutate(y = y / sum(y),
+           category = "Standardised Posterior")
+  
+  p <- pr %>%
+    ggplot(aes(x = x, y = y)) +
+    geom_line(aes(colour = category), size = 1.25) +
+    geom_line(data = lh, size = 1.25, aes(colour = category)) +
+    geom_line(data = st_post, size = 1.25, aes(colour = category)) +
+    labs(title = "Our prior, random sample, and posterior update",
+         subtitle = paste0("N = ", n),
+         x = the_xlab,
+         y = "Probability Density",
+         colour = NULL) +
+    scale_colour_manual(values = palette) +
+    theme(legend.position = "bottom",
+          legend.key = element_blank())
+  
+  return(p)
+}
+
+p_5 <- do_bayes(n = 5)
+p_10 <- do_bayes(n = 10)
+p_100 <- do_bayes(n = 100)
+p_1000 <- do_bayes(n = 1000)
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
+print(p_100)
+```
+
+Activity: The impact of sample size
+========================================================
+class: small-code
+
+How about 1000? As sample size increases, the impact of the prior on the posterior weakens in comparison to the data/likelihood.
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
+print(p_1000)
+```
+
+The mathematics of Bayesian statistics
+========================================================
+
+Bayesian statistics boils down to [Bayes's Theorem](https://en.wikipedia.org/wiki/Bayes%27_theorem):
+
+$P(\theta \mid D) = \frac{P(D \mid \theta) \cdot P(\theta)}{P(D)}$
+
+Let's break it down formally:
+
+$P(\theta \mid D)$ - this is called the **posterior** (probability of model parameters given the data)
+
+$P(D \mid \theta)$ - this is called the **likelihood** (probability of the data given model parameters)
+
+$P(\theta)$ - this is called the **prior** (our expressed understanding of the probability of model parameters)
+
+$P(D)$ - this is called the **marginal likelihood** (probability of the data)
+
+Mathematical complications
+========================================================
+
+The **marginal likelihood** (denominator in Bayes Theorem) is the reason we can't just compute complex Bayesian models easily - it involves summing (integrating) over all the possible values of the distributions. In a trivial single number case it is easy to just add the numbers, but when using higher-dimensional models and complicated prior and likelihood distributions, this becomes analytically impossible.
+
+To get around this, we instead employ sampling algorithms, such as [Markov chain Monte Carlo (MCMC)](https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo), to simulate a large number of times to approximate the posterior distribution instead.
+
+Benefits of a Bayesian approach to inference
+========================================================
+
+* Probabilistic estimates
+* Quantification of uncertainty
+* Ability to capture subject matter expertise
+* Intuitive conceptualisation of statistics
+* Simulation can help address limitations with small N
+* No *p*-values (don't get me started on Bayes factors...)
+
+Connection to Registered Report format
+========================================================
+
+![Centre for Open Science](registered_reports.width-800.png)
+
+A Bayesian framework (while not perfect) protects against a lot of traditional frequentist issues such as *p*-hacking. Bayesian formalism integrates easily into Registered Reports format as Bayesian inference is largely concerned with transparently *modelling the underlying statistical process that is likely to have generated your data*. This forces researchers to think deeper about study design and analysis methodology, consistent with the RR format.
+
+The overall workflow
+========================================================
+
+![](workflow/workflow.png)
+
+Software tools for Bayesian inference
+========================================================
+
+![](software/mosaic_lscp.png)
+
+An applied example
+========================================================
+
+Now that we have the basics, let's take a look at a basic Bayesian logistic regression in R using `Stan`.
+
+## The premise
+
+**We are going to explore whether time series features can classify whether the Sony AIBO Robot was walking on carpet or cement.**
+
+This data comes from the [UEA & UCR Time Series Classification Repository](www.timeseriesclassification.com).
+
+Example: Basic visualisation of our prior
+========================================================
+class: small-code
+
+I'm not really sure what to expect, but previous researchers have mentioned that a Student's t distribution is a safe first guess for logistic regression when we expect coefficients around 0 but with some chance of being large. Here is my vague prior for the coefficients (same for all 22 features).
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+data.frame(x = seq(from = -5, to = 5, by = 0.1)) %>%
+  mutate(y = LaplacesDemon::dst(x, mu = 0, sigma = 2.5, nu = 7),
+         category = "Prior") %>%
+  ggplot(aes(x = x, y = y, colour = category)) +
+  geom_line(size = 1.25) +
+  labs(title = "Our vague coefficient prior",
+       x = "x",
+       y = "Probability Density") +
+  scale_colour_manual(values = palette) +
+  theme(legend.position = "none")
+```
+
+Example: Basic visualisation of our prior
+========================================================
+class: small-code
+
+Our intercept is also pretty wide and vague, using a mean of 0 and SD of 3 $\mathcal{N}(0,3)$.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+data.frame(x = seq(from = -5, to = 5, by = 0.1)) %>%
+  mutate(y = dnorm(x, mean = 0, sd = 1),
+         category = "Prior") %>%
+  ggplot(aes(x = x, y = y, colour = category)) +
+  geom_line(size = 1.25) +
+  labs(title = "Our vague intercept prior",
+       x = "x",
+       y = "Probability Density") +
+  scale_colour_manual(values = palette) +
+  theme(legend.position = "none")
+```
+
+Example: Initial Bayesian model fit
+========================================================
+class: small-code
+
+```{r, warning = FALSE, message = FALSE, results = 'hide', echo = FALSE}
+
+```
+
+Example: Initial Bayesian model fit
+========================================================
+class: small-code
+
+We can compare our prior with the posterior. Here are the coefficient distributions for each feature.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE, echo = FALSE}
+
+```
+
+Example: Using historical posterior as new prior
+========================================================
+class: small-code
+
+We can now extract the posterior information from this model to use as an *informative* prior for the test set.
+
+```{r, warning = FALSE, message = FALSE, results = 'hide'}
+
+```
+
+Example: Using historical posterior as new prior
+========================================================
+class: small-code
+
+And a final comparison of our initial prior, the historical data posterior (which became the 2020 model prior) and the 2020 posterior. We are skipping the intercept as it is of little interest, so let's just look at the regression coefficient.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+
+```
+
+Common criticisms of Bayesian inference
+========================================================
+
+* Computation time
+* Subjectivity of priors
+
+Final remarks
+========================================================
+
+There is much, much more to learn in Bayesian statistics and many other ways to evaluate models. This session hopefully served as a primer to either inspire you to learn more, or to at least consider using Bayesian approaches on current/future projects.
+
+Special thanks to Ben Fulcher for providing input on the content of the talk, and [Peter Ellis](http://freerangestats.info) for providing input on the first half of the talk for the version I originally gave to my firm in early 2021.
+
+**Using Bayes' Theorem doesn't make you a Bayesian. Quantifying uncertainty with probability makes you a Bayesian** - Michael Betancourt
