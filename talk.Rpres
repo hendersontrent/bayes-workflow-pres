@@ -17,11 +17,12 @@ Goals of the presentation
 ========================================================
 class: small-code
 
-This interactive talk aims to help you achieve three things:
+This interactive talk aims to help you achieve four things:
 
-- Develop an initial understanding of Bayes rule and how to apply it
-- Understand how the Bayesian approach fits within the open science framework
-- Understand the tools to carry out Bayesian analysis (with an example)
+* Understand the fundamentals of Bayes rule and how to apply it
+* Understand how the Bayesian approach to statistical inference fits within the open science framework
+* Understand the available software tools to carry out Bayesian analysis
+* Understand what a basic end-to-end Bayesian analysis workflow looks like
 
 All the code for today is in a [GitHub repository](https://github.com/hendersontrent/bayes-workflow-pres).
 
@@ -38,14 +39,13 @@ library(tidyr)
 library(ggplot2)
 library(scales)
 library(tibble)
-library(foreign)
 library(janitor)
-library(Rcatch22)
-library(theft)
-library(rstan)
+library(rstanarm)
 library(bayesplot)
 library(janitor)
 library(tidybayes)
+library(fitzRoy)
+library(modelr)
 
 # Named palette of colours to ensure they get consistent colours in all plots
 
@@ -91,7 +91,9 @@ pr %>%
   geom_line(size = 1.25) +
   labs(title = "Our prior",
        x = the_xlab,
-       y = "Probability Density") +
+       y = "Probability Density",
+       colour = NULL) +
+  scale_colour_manual(values = palette) +
   theme(legend.position = "none")
 ```
 
@@ -99,7 +101,7 @@ Activity: A sample of data
 ========================================================
 class: small-code
 
-Now let's say we sampled 10 university students and observed whether they were attending a Go8 or not and 5 said they were.
+Now let's say we sampled 10 university students and observed whether they were attending a Go8 or not and 5 said they were. These realisations are called the "likelihood".
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
 lh <- data.frame(x = 0:10) %>%
@@ -149,7 +151,7 @@ Activity: Updating our beliefs
 ========================================================
 class: small-code
 
-To properly update our beliefs, we need to standardise our posterior so that the total probability equals one.
+To properly update our beliefs, we need to standardise our posterior so that the total probability equals one. This makes it a proper probability distribution.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
 st_post <- posterior %>%
@@ -263,135 +265,272 @@ $P(D)$ - this is called the **marginal likelihood** (probability of the data)
 Mathematical complications
 ========================================================
 
-The **marginal likelihood** (denominator in Bayes Theorem) is the reason we can't just compute complex Bayesian models easily - it involves summing (integrating) over all the possible values of the distributions. In a trivial single number case it is easy to just add the numbers, but when using higher-dimensional models and complicated prior and likelihood distributions, this becomes analytically impossible.
+The **marginal likelihood** (denominator in Bayes Theorem) is the reason we can't just compute complex Bayesian models easily - it involves summing (integrating) over all the possible values of the distributions. In a trivial single number case it is easy to just add the numbers, but when using higher-dimensional models and complicated prior and likelihood distributions, this becomes analytically intractable
 
 To get around this, we instead employ sampling algorithms, such as [Markov chain Monte Carlo (MCMC)](https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo), to simulate a large number of times to approximate the posterior distribution instead.
 
 Benefits of a Bayesian approach to inference
 ========================================================
 
-* Probabilistic estimates
+* Probabilistic estimates instead of point estimates
 * Quantification of uncertainty
 * Ability to capture subject matter expertise
 * Intuitive conceptualisation of statistics
 * Simulation can help address limitations with small N
-* No *p*-values (don't get me started on Bayes factors...)
-
-Connection to Registered Report format
-========================================================
-
-![Centre for Open Science](registered_reports.width-800.png)
-
-A Bayesian framework (while not perfect) protects against a lot of traditional frequentist issues such as *p*-hacking. Bayesian formalism integrates easily into Registered Reports format as Bayesian inference is largely concerned with transparently *modelling the underlying statistical process that is likely to have generated your data*. This forces researchers to think deeper about study design and analysis methodology, consistent with the RR format.
-
-The overall workflow
-========================================================
-
-![](workflow/workflow.png)
-
-Software tools for Bayesian inference
-========================================================
-
-![](software/mosaic_lscp.png)
-
-An applied example
-========================================================
-
-Now that we have the basics, let's take a look at a basic Bayesian logistic regression in R using `Stan`.
-
-## The premise
-
-**We are going to explore whether time series features can classify whether the Sony AIBO Robot was walking on carpet or cement.**
-
-This data comes from the [UEA & UCR Time Series Classification Repository](www.timeseriesclassification.com).
-
-Example: Basic visualisation of our prior
-========================================================
-class: small-code
-
-I'm not really sure what to expect, but previous researchers have mentioned that a Student's t distribution is a safe first guess for logistic regression when we expect coefficients around 0 but with some chance of being large. Here is my vague prior for the coefficients (same for all 22 features).
-
-```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
-data.frame(x = seq(from = -5, to = 5, by = 0.1)) %>%
-  mutate(y = LaplacesDemon::dst(x, mu = 0, sigma = 2.5, nu = 7),
-         category = "Prior") %>%
-  ggplot(aes(x = x, y = y, colour = category)) +
-  geom_line(size = 1.25) +
-  labs(title = "Our vague coefficient prior",
-       x = "x",
-       y = "Probability Density") +
-  scale_colour_manual(values = palette) +
-  theme(legend.position = "none")
-```
-
-Example: Basic visualisation of our prior
-========================================================
-class: small-code
-
-Our intercept is also pretty wide and vague, using a mean of 0 and SD of 3 $\mathcal{N}(0,3)$.
-
-```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
-data.frame(x = seq(from = -5, to = 5, by = 0.1)) %>%
-  mutate(y = dnorm(x, mean = 0, sd = 1),
-         category = "Prior") %>%
-  ggplot(aes(x = x, y = y, colour = category)) +
-  geom_line(size = 1.25) +
-  labs(title = "Our vague intercept prior",
-       x = "x",
-       y = "Probability Density") +
-  scale_colour_manual(values = palette) +
-  theme(legend.position = "none")
-```
-
-Example: Initial Bayesian model fit
-========================================================
-class: small-code
-
-```{r, warning = FALSE, message = FALSE, results = 'hide', echo = FALSE}
-
-```
-
-Example: Initial Bayesian model fit
-========================================================
-class: small-code
-
-We can compare our prior with the posterior. Here are the coefficient distributions for each feature.
-
-```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE, echo = FALSE}
-
-```
-
-Example: Using historical posterior as new prior
-========================================================
-class: small-code
-
-We can now extract the posterior information from this model to use as an *informative* prior for the test set.
-
-```{r, warning = FALSE, message = FALSE, results = 'hide'}
-
-```
-
-Example: Using historical posterior as new prior
-========================================================
-class: small-code
-
-And a final comparison of our initial prior, the historical data posterior (which became the 2020 model prior) and the 2020 posterior. We are skipping the intercept as it is of little interest, so let's just look at the regression coefficient.
-
-```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
-
-```
+* No *p*-values
+* Does not condition on an unobservable null hypothesis
 
 Common criticisms of Bayesian inference
 ========================================================
 
 * Computation time
 * Subjectivity of priors
+* Sampling issues with MCMC
+
+Connection to Registered Report format
+========================================================
+
+![Centre for Open Science](registered_reports.width-800.png)
+
+A Bayesian framework (while not perfect) protects against a lot of traditional frequentist issues such as *p*-hacking. Bayesian formalism integrates easily into the Registered Reports format as Bayesian inference is largely concerned with transparently *modelling the underlying statistical process that is likely to have generated your data*. This forces researchers to think deeper upfront about study design and analytical methodology, consistent with the RR format.
+
+The overall workflow
+========================================================
+
+![](diagrams/workflow.png)
+
+Software tools for Bayesian inference
+========================================================
+
+![](software/mosaic_lscp.png)
+
+Enough serious talk, more AFL!
+========================================================
+
+Now that we have the basics, let's take a look at a basic Bayesian regression workflow on some open-source AFL data.
+
+## The premise
+
+**We are going to explore the relationship between the number of marks inside 50 and goals scored in the AFL for the 2020 season using data from prior seasons.**
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+# Pull data back to 2017
+
+years <- c(seq(from = 2017, to = 2020, by = 1))
+store <- list()
+
+for(i in years){
+  
+  start_date <- as.character(paste0(i,"-01-01"))
+  end_date <- as.character(paste0(i,"-12-01"))
+  
+  tmp <- get_afltables_stats(start_date = start_date, end_date = end_date) %>%
+    clean_names() %>%
+    mutate(season = gsub("-.*", "\\1", date),
+           season = as.numeric(season))
+  
+  store[[i]] <- tmp
+}
+
+all_seasons <- rbindlist(store, use.names = TRUE)
+
+# Data aggregation
+
+'%ni%' <- Negate('%in%')
+the_finals <- c("EF", "SF", "QF", "PF", "GF") # Remove finals as these might influence analysis
+
+# Aggregate data
+
+d <- all_seasons %>%
+  filter(round %ni% the_finals) %>%
+  mutate(uniqueid = paste0(season,"_",round,"_",home_team,"_",away_team)) %>%
+  group_by(season, round, playing_for, uniqueid) %>%
+  summarise(goals = sum(goals),
+            marks_inside_50 = sum(marks_inside_50)) %>%
+  ungroup()
+```
+
+Example: Prior specification
+========================================================
+class: small-code
+
+Since I have no real clue how many goals there would be if there were zero marks, I have a really vague (wide) prior for the intercept of $\mathcal{N}(0,5)$:
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+palette2 <- c("#E494D3", "#87DCC0", "#88BBE4")
+
+names(palette2) <- c("Initial Prior", 
+                     "Historical Posterior",
+                     "2020 Posterior")
+
+set.seed(123)
+
+alpha_mine <- data.frame(x = rnorm(1000, mean = 0, sd = 5),
+                         category = "Initial Prior")
+am <- ggplot() +
+  geom_density(data = alpha_mine, aes(x = x, fill = category), alpha = 0.4, colour = "black") +
+  labs(title = "Intercept",
+       x = "Value",
+       y = "Density",
+       fill = NULL) +
+  scale_fill_manual(values = palette2) +
+  theme(legend.position = "bottom",
+        legend.key = element_blank())
+
+print(am)
+```
+
+Example: Basic visualisation
+========================================================
+class: small-code
+
+But I am confident that more marks means more goals, but not 1:1! Might be 10 times as many marks as goals, which means 0.1 as a slope? So here is my vague prior for the regression coefficient.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+set.seed(123)
+
+beta_mine <- data.frame(x = rnorm(1000, mean = 0.1, sd = 0.05),
+                        category = "Initial Prior")
+
+bm <- ggplot() +
+  geom_density(data = beta_mine, aes(x = x, fill = category), alpha = 0.4, colour = "black") +
+  labs(title = "Coefficient",
+       x = "Value",
+       y = "Density",
+       fill = NULL) +
+  scale_fill_manual(values = palette2) +
+  theme(legend.position = "bottom",
+        legend.key = element_blank())
+
+print(bm)
+```
+
+Example: Initial Bayesian model fit
+========================================================
+class: small-code
+
+After fitting the model, we can compare our prior with the posterior. Here is the intercept.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE, results = 'hide'}
+historical <- d %>%
+  filter(season != 2020)
+
+m1 <- stan_glm(goals ~ marks_inside_50,
+               data = historical, family = neg_binomial_2,
+               prior = normal(0.1,0.05), prior_intercept = normal(0, 5),
+               chains = 3, seed = 123)
+
+historical_posterior <- as.data.frame(m1) %>%
+  clean_names() %>%
+  mutate(category = "Historical Posterior")
+
+am <- am +
+  geom_density(data = historical_posterior, aes(x = intercept, fill = category), colour = "black", alpha = 0.7)
+
+print(am)
+```
+
+Example: Initial Bayesian model fit
+========================================================
+class: small-code
+
+And here is the slope coefficient, which is of much more interest to us.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
+bm <- bm +
+  geom_density(data = historical_posterior, aes(x = marks_inside_50, fill = category), colour = "black", alpha = 0.7)
+
+print(bm)
+```
+
+Example: Using historical posterior as new prior
+========================================================
+class: small-code
+
+With this information, we can now fit our final model and compare our initial prior, the historical data posterior (which became the 2020 model prior) and the 2020 posterior. We are skipping the intercept here as it is of little interest, so let's just look at the regression coefficient.
+
+```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE, results = 'hide'}
+hist_post_agg <- as.data.frame(m1) %>%
+  clean_names() %>%
+  summarise(alpha_mean = mean(intercept),
+            alpha_sd = sd(intercept),
+            beta_mean = mean(marks_inside_50),
+            beta_sd = sd(marks_inside_50))
+
+season2020 <- d %>%
+  filter(season == 2020)
+
+m2 <- stan_glm(goals ~ marks_inside_50,
+               data = season2020, family = neg_binomial_2,
+               prior = normal(location = hist_post_agg$beta_mean, scale = hist_post_agg$beta_sd),
+               prior_intercept = normal(location = hist_post_agg$alpha_mean, scale = hist_post_agg$alpha_sd),
+               chains = 3, seed = 123)
+
+posterior_2020 <- as.data.frame(m2) %>%
+  clean_names() %>%
+  mutate(category = "2020 Posterior")
+
+bm <- bm +
+  geom_density(data = posterior_2020, aes(x = marks_inside_50, fill = category), colour = "black", alpha = 0.7) +
+  coord_cartesian(xlim = c(0.01, 0.06))
+
+print(bm)
+```
+
+Example: Model diagnostics
+========================================================
+class: small-code
+
+We can check if the Markov chains mixed using traceplots for the main parameters. We want these just to look like white noise, which they do here.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+color_scheme_set("mix-blue-pink")
+mcmc_trace(m2, facet_args = list(nrow = 2, labeller = label_parsed))
+```
+
+Example: Model diagnostics
+========================================================
+class: small-code
+
+We can further test how well our simulated data tracks against the real data by comparing the probability density of a sample of random draws from the posterior against the probability density of the actual data.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+ppc_dens_overlay(y = m2$y,
+                 yrep = posterior_predict(m2, draws = 100))
+```
+
+Example: Examining posterior distributions
+========================================================
+class: small-code
+
+Here is the coefficient posterior with shaded 90% credible intervals. Credible intervals specify the probability with which the true value lies (compared to 'confidence intervals' which are *not* probability distributions).
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+mcmc_areas(m2, pars = "marks_inside_50", prob = 0.9)
+```
+
+Example: Our model against the actual data
+========================================================
+class: small-code
+
+We can now plot a random sample of draws from our posterior distribution and use the coefficient values to draw regression lines over the actual data.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+season2020 %>%
+  data_grid(marks_inside_50 = modelr::seq_range(marks_inside_50, n = nrow(season2020)), goals) %>%   
+  add_fitted_draws(m2, n = 100) %>%
+  ggplot(aes(x = marks_inside_50, y = goals)) +
+  geom_jitter(data = season2020, colour = "#E494D3", position = "jitter")+
+  geom_line(aes(y = .value, group = .draw), alpha = 0.1, colour = "#88BBE4")+
+  labs(title = "100 random posterior draws for 2020 data", x = "Marks Inside 50",
+       y = "Goals")
+```
 
 Final remarks
 ========================================================
 
-There is much, much more to learn in Bayesian statistics and many other ways to evaluate models. This session hopefully served as a primer to either inspire you to learn more, or to at least consider using Bayesian approaches on current/future projects.
+There is much, much more to learn in Bayesian statistics and many other ways to evaluate and improve models. This session hopefully served as a primer to either inspire you to learn more, or to at least consider using Bayesian approaches on current/future projects.
 
-Special thanks to Ben Fulcher for providing input on the content of the talk, and [Peter Ellis](http://freerangestats.info) for providing input on the first half of the talk for the version I originally gave to my firm in early 2021.
+Special thanks to Ben Fulcher for providing input on the content of the talk, and [Peter Ellis](http://freerangestats.info) for providing input on the version I originally gave to my firm in early 2021.
 
 **Using Bayes' Theorem doesn't make you a Bayesian. Quantifying uncertainty with probability makes you a Bayesian** - Michael Betancourt
