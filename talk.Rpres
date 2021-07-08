@@ -4,7 +4,7 @@
 }
 </style>
 
-Basic principles of a Bayesian workflow
+Basic principles of Bayesian inference and its analytical workflow
 ========================================================
 author: Trent Henderson
 date: 16 July 2021
@@ -101,7 +101,7 @@ Activity: A sample of data
 ========================================================
 class: small-code
 
-Now let's say we sampled 10 university students and observed whether they were attending a Go8 or not and 5 said they were. These realisations are called the "likelihood".
+Now let's say we sampled 10 university students and observed whether they were attending a Go8 or not and 5 said they were. These realisations are called the "likelihood". And we can represent them using a `binomial` distribution.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.keep = TRUE}
 lh <- data.frame(x = 0:10) %>%
@@ -354,7 +354,7 @@ Example: Prior specification
 ========================================================
 class: small-code
 
-Since I have no real clue how many goals there would be if there were zero marks, I have a really vague (wide) prior for the intercept of $\mathcal{N}(0,5)$:
+Since I have no real clue how many goals there would be if there were zero marks, I have a really vague (wide) prior for the intercept of $\mathcal{N}(5,1.5)$:
 
 ```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
 palette2 <- c("#E494D3", "#87DCC0", "#88BBE4")
@@ -365,7 +365,7 @@ names(palette2) <- c("Initial Prior",
 
 set.seed(123)
 
-alpha_mine <- data.frame(x = rnorm(1000, mean = 0, sd = 5),
+alpha_mine <- data.frame(x = rnorm(1000, mean = 5, sd = 1.5),
                          category = "Initial Prior")
 am <- ggplot() +
   geom_density(data = alpha_mine, aes(x = x, fill = category), alpha = 0.4, colour = "black") +
@@ -389,7 +389,7 @@ But I am confident that more marks means more goals, but not 1:1! Might be 10 ti
 ```{r, message = FALSE, echo = FALSE, fig.keep = TRUE, warning = FALSE}
 set.seed(123)
 
-beta_mine <- data.frame(x = rnorm(1000, mean = 0.1, sd = 0.05),
+beta_mine <- data.frame(x = rnorm(1000, mean = 0.1, sd = 0.5),
                         category = "Initial Prior")
 
 bm <- ggplot() +
@@ -416,8 +416,8 @@ historical <- d %>%
   filter(season != 2020)
 
 m1 <- stan_glm(goals ~ marks_inside_50,
-               data = historical, family = neg_binomial_2,
-               prior = normal(0.1,0.05), prior_intercept = normal(0, 5),
+               data = historical,
+               prior = normal(0.1, 0.5), prior_intercept = normal(5, 1.5),
                chains = 3, seed = 123)
 
 historical_posterior <- as.data.frame(m1) %>%
@@ -461,7 +461,7 @@ season2020 <- d %>%
   filter(season == 2020)
 
 m2 <- stan_glm(goals ~ marks_inside_50,
-               data = season2020, family = neg_binomial_2,
+               data = season2020,
                prior = normal(location = hist_post_agg$beta_mean, scale = hist_post_agg$beta_sd),
                prior_intercept = normal(location = hist_post_agg$alpha_mean, scale = hist_post_agg$alpha_sd),
                chains = 3, seed = 123)
@@ -471,42 +471,9 @@ posterior_2020 <- as.data.frame(m2) %>%
   mutate(category = "2020 Posterior")
 
 bm <- bm +
-  geom_density(data = posterior_2020, aes(x = marks_inside_50, fill = category), colour = "black", alpha = 0.7) +
-  coord_cartesian(xlim = c(0.01, 0.06))
+  geom_density(data = posterior_2020, aes(x = marks_inside_50, fill = category), colour = "black", alpha = 0.7)
 
 print(bm)
-```
-
-Example: Model diagnostics
-========================================================
-class: small-code
-
-We can check if the Markov chains mixed using traceplots for the main parameters. We want these just to look like white noise, which they do here.
-
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
-color_scheme_set("mix-blue-pink")
-mcmc_trace(m2, facet_args = list(nrow = 2, labeller = label_parsed))
-```
-
-Example: Model diagnostics
-========================================================
-class: small-code
-
-We can further test how well our simulated data tracks against the real data by comparing the probability density of a sample of random draws from the posterior against the probability density of the actual data.
-
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
-ppc_dens_overlay(y = m2$y,
-                 yrep = posterior_predict(m2, draws = 100))
-```
-
-Example: Examining posterior distributions
-========================================================
-class: small-code
-
-Here is the coefficient posterior with shaded 90% credible intervals. Credible intervals specify the probability with which the true value lies (compared to 'confidence intervals' which are *not* probability distributions).
-
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
-mcmc_areas(m2, pars = "marks_inside_50", prob = 0.9)
 ```
 
 Example: Our model against the actual data
@@ -520,7 +487,7 @@ season2020 %>%
   data_grid(marks_inside_50 = modelr::seq_range(marks_inside_50, n = nrow(season2020)), goals) %>%   
   add_fitted_draws(m2, n = 100) %>%
   ggplot(aes(x = marks_inside_50, y = goals)) +
-  geom_jitter(data = season2020, colour = "#E494D3", position = "jitter")+
+  geom_point(data = season2020, colour = "#E494D3")+
   geom_line(aes(y = .value, group = .draw), alpha = 0.1, colour = "#88BBE4")+
   labs(title = "100 random posterior draws for 2020 data", x = "Marks Inside 50",
        y = "Goals")
@@ -529,7 +496,7 @@ season2020 %>%
 Final remarks
 ========================================================
 
-There is much, much more to learn in Bayesian statistics and many other ways to evaluate and improve models. This session hopefully served as a primer to either inspire you to learn more, or to at least consider using Bayesian approaches on current/future projects.
+There is much, much more to learn in Bayesian inference and many other ways to evaluate and improve models. This session hopefully served as a primer to either inspire you to learn more, or to at least consider using Bayesian approaches on current/future projects.
 
 Special thanks to Ben Fulcher for providing input on the content of the talk, and [Peter Ellis](http://freerangestats.info) for providing input on the version I originally gave to my firm in early 2021.
 
