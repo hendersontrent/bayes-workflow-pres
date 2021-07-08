@@ -4,7 +4,7 @@
 }
 </style>
 
-Basic principles of a Bayesian workflow
+Basic principles of Bayesian inference and its analytical workflow
 ========================================================
 author: Trent Henderson
 date: 16 July 2021
@@ -55,7 +55,7 @@ Activity: A sample of data
 ========================================================
 class: small-code
 
-Now let's say we sampled 10 university students and observed whether they were attending a Go8 or not and 5 said they were. These realisations are called the "likelihood".
+Now let's say we sampled 10 university students and observed whether they were attending a Go8 or not and 5 said they were. These realisations are called the "likelihood". And we can represent them using a `binomial` distribution.
 
 <img src="talk-figure/unnamed-chunk-3-1.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" width="850px" height="450px" />
 
@@ -167,7 +167,7 @@ Example: Prior specification
 ========================================================
 class: small-code
 
-Since I have no real clue how many goals there would be if there were zero marks, I have a really vague (wide) prior for the intercept of $\mathcal{N}(0,5)$:
+Since I have no real clue how many goals there would be if there were zero marks, I have a really vague (wide) prior for the intercept of $\mathcal{N}(5,1.5)$:
 
 <img src="talk-figure/unnamed-chunk-10-1.png" title="plot of chunk unnamed-chunk-10" alt="plot of chunk unnamed-chunk-10" width="850px" height="450px" />
 
@@ -203,42 +203,18 @@ With this information, we can now fit our final model and compare our initial pr
 
 <img src="talk-figure/unnamed-chunk-14-1.png" title="plot of chunk unnamed-chunk-14" alt="plot of chunk unnamed-chunk-14" width="850px" height="450px" />
 
-Example: Model diagnostics
-========================================================
-class: small-code
-
-We can check if the Markov chains mixed using traceplots for the main parameters. We want these just to look like white noise, which they do here.
-
-<img src="talk-figure/unnamed-chunk-15-1.png" title="plot of chunk unnamed-chunk-15" alt="plot of chunk unnamed-chunk-15" width="850px" height="450px" />
-
-Example: Model diagnostics
-========================================================
-class: small-code
-
-We can further test how well our simulated data tracks against the real data by comparing the probability density of a sample of random draws from the posterior against the probability density of the actual data.
-
-<img src="talk-figure/unnamed-chunk-16-1.png" title="plot of chunk unnamed-chunk-16" alt="plot of chunk unnamed-chunk-16" width="850px" height="450px" />
-
-Example: Examining posterior distributions
-========================================================
-class: small-code
-
-Here is the coefficient posterior with shaded 90% credible intervals. Credible intervals specify the probability with which the true value lies (compared to 'confidence intervals' which are *not* probability distributions).
-
-<img src="talk-figure/unnamed-chunk-17-1.png" title="plot of chunk unnamed-chunk-17" alt="plot of chunk unnamed-chunk-17" width="850px" height="450px" />
-
 Example: Our model against the actual data
 ========================================================
 class: small-code
 
 We can now plot a random sample of draws from our posterior distribution and use the coefficient values to draw regression lines over the actual data.
 
-<img src="talk-figure/unnamed-chunk-18-1.png" title="plot of chunk unnamed-chunk-18" alt="plot of chunk unnamed-chunk-18" width="850px" height="450px" />
+<img src="talk-figure/unnamed-chunk-15-1.png" title="plot of chunk unnamed-chunk-15" alt="plot of chunk unnamed-chunk-15" width="850px" height="450px" />
 
 Final remarks
 ========================================================
 
-There is much, much more to learn in Bayesian statistics and many other ways to evaluate and improve models. This session hopefully served as a primer to either inspire you to learn more, or to at least consider using Bayesian approaches on current/future projects.
+There is much, much more to learn in Bayesian inference and many other ways to evaluate and improve models. This session hopefully served as a primer to either inspire you to learn more, or to at least consider using Bayesian approaches on current/future projects.
 
 Special thanks to Ben Fulcher for providing input on the content of the talk, and [Peter Ellis](http://freerangestats.info) for providing input on the version I originally gave to my firm in early 2021.
 
