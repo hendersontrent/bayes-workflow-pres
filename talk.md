@@ -123,10 +123,10 @@ Benefits of a Bayesian approach to inference
 * Probabilistic estimates instead of point estimates
 * Quantification of uncertainty
 * Ability to capture subject matter expertise
-* Intuitive conceptualisation of statistics
+* Ability to update models as new data is available
 * Simulation can help address limitations with small N
 * No *p*-values
-* Does not condition on an unobservable null hypothesis
+* Does not condition on an unobservable null hypothesis. Instead conditions on the data you have observed.
 
 Common criticisms of Bayesian inference
 ========================================================
@@ -140,7 +140,7 @@ Connection to Registered Report format
 
 ![Centre for Open Science](registered_reports.width-800.png)
 
-A Bayesian framework (while not perfect) protects against a lot of traditional frequentist issues such as *p*-hacking. Bayesian formalism integrates easily into the Registered Reports format as Bayesian inference is largely concerned with transparently *modelling the underlying statistical process that is likely to have generated your data*. This forces researchers to think deeper upfront about study design and analytical methodology, consistent with the RR format.
+A Bayesian framework (while not perfect) protects against a lot of traditional frequentist issues such as *p*-hacking. Bayesian formalism integrates easily into the Registered Reports format as Bayesian inference is largely concerned with transparently *modelling the underlying statistical process that is likely to have generated your data*. This forces researchers to think deeper upfront about study design and analytical methodology, consistent with the RR format. As Bayesian models are probabilistic, incorporation of new data does not lead to problematic behaviour such as *p*-hacking so these study designs can be considered from the start.
 
 The overall workflow
 ========================================================
