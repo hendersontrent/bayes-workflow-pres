@@ -245,6 +245,11 @@ How about 1000? As sample size increases, the impact of the prior on the posteri
 print(p_1000)
 ```
 
+Activity: A more realistic representation
+========================================================
+
+![](go8anim.gif)
+
 The mathematics of Bayesian statistics
 ========================================================
 

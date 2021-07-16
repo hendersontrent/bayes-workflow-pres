@@ -93,6 +93,11 @@ How about 1000? As sample size increases, the impact of the prior on the posteri
 
 <img src="talk-figure/unnamed-chunk-8-1.png" title="plot of chunk unnamed-chunk-8" alt="plot of chunk unnamed-chunk-8" width="850px" height="450px" />
 
+Activity: A more realistic representation
+========================================================
+
+![](go8anim.gif)
+
 The mathematics of Bayesian statistics
 ========================================================
 
