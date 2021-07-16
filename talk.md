@@ -24,7 +24,7 @@ This interactive talk aims to help you achieve four things:
 * Understand the available software tools to carry out Bayesian analysis
 * Understand what a basic end-to-end Bayesian analysis workflow looks like
 
-All the code for today is in a [GitHub repository](https://github.com/hendersontrent/bayes-workflow-pres).
+All the code for today is in a GitHub repository: [https://github.com/hendersontrent/bayes-workflow-pres](https://github.com/hendersontrent/bayes-workflow-pres)
 
 
 
